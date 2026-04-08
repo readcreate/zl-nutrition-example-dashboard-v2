@@ -774,6 +774,126 @@ function renderCarePathway(cases, range) {
   }
 }
 
+// ── TRAJECTORY FLOW ──
+
+function renderTrajectoryFlow(cases, range) {
+  const el = document.getElementById('trajectory-chart');
+  if (!el) return;
+
+  const filteredCases = cases.filter(c => {
+    for (const prog of ['pns','pta','usn']) {
+      const ep = c[prog];
+      if (!ep) continue;
+      const ref = ep.admDate || c.regDate;
+      if (!ref) continue;
+      const d = new Date(ref + 'T00:00:00');
+      if (range.start && d < range.start) continue;
+      if (range.end   && d > range.end)   continue;
+      return true;
+    }
+    return false;
+  });
+
+  const trajCounts = {};
+  for (const c of filteredCases) {
+    const eps = [];
+    for (const prog of ['pns','pta','usn']) {
+      const ep = c[prog];
+      if (!ep) continue;
+      eps.push({ prog: prog.toUpperCase(), admDate: ep.admDate || '', outcome: ep.outcome });
+    }
+    eps.sort((a, b) => (a.admDate < b.admDate ? -1 : 1));
+    if (eps.length === 0) continue;
+    const terminal = eps[eps.length - 1].outcome || 'Actif';
+    const pathKey  = eps.map(e => e.prog).join('→') + '|' + terminal;
+    trajCounts[pathKey] = (trajCounts[pathKey] || 0) + 1;
+  }
+
+  const total = Object.values(trajCounts).reduce((s, v) => s + v, 0);
+  if (total === 0) { el.innerHTML = noDataHtml(); return; }
+
+  const progColor = { PNS: '#2a7a4b', PTA: '#1a5fa8', USN: '#c8102e' };
+  const progBg    = { PNS: 'rgba(42,122,75,0.10)', PTA: 'rgba(26,95,168,0.10)', USN: 'rgba(200,16,46,0.10)' };
+  const outColor  = { 'Guéri': '#2a7a4b', 'Abandon': '#b45309', 'Transféré': '#1a5fa8', 'Décédé': '#c8102e', 'Actif': '#6b7280' };
+  const outBg     = { 'Guéri': 'rgba(42,122,75,0.10)', 'Abandon': 'rgba(180,83,9,0.10)', 'Transféré': 'rgba(26,95,168,0.10)', 'Décédé': 'rgba(200,16,46,0.10)', 'Actif': 'rgba(107,114,128,0.10)' };
+
+  const groups = { PNS: [], PTA: [], USN: [] };
+  for (const [key, count] of Object.entries(trajCounts)) {
+    const firstProg = key.split('|')[0].split('→')[0];
+    if (groups[firstProg]) groups[firstProg].push([key, count]);
+  }
+
+  const maxCount = Math.max(...Object.values(trajCounts));
+  const multiProgCount = filteredCases.filter(c => ['pns','pta','usn'].filter(p => c[p]).length > 1).length;
+
+  function node(prog) {
+    return `<span style="background:${progBg[prog]};color:${progColor[prog]};border:1.5px solid ${progColor[prog]}55;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;letter-spacing:0.05em;white-space:nowrap;">${prog}</span>`;
+  }
+
+  function renderRow(key, count) {
+    const [pathStr, terminal] = key.split('|');
+    const progs  = pathStr.split('→');
+    const pct    = Math.round(count / total * 100);
+    const barW   = Math.round(count / maxCount * 100);
+    const oc     = outColor[terminal] || '#6b7280';
+    const ob     = outBg[terminal]    || 'rgba(107,114,128,0.10)';
+    const pathHtml = progs.map((p, i) =>
+      (i > 0 ? `<span style="color:var(--gray-300);font-size:13px;margin:0 2px;line-height:1;flex-shrink:0;">›</span>` : '') + node(p)
+    ).join('');
+    const outcomeHtml = `<span style="background:${ob};color:${oc};border:1.5px solid ${oc}55;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap;">${terminal}</span>`;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;margin-bottom:2px;"
+           onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background='transparent'">
+        <div style="min-width:240px;display:flex;align-items:center;flex-wrap:nowrap;gap:2px;">
+          ${pathHtml}
+          <span style="color:var(--gray-300);font-size:13px;margin:0 4px;line-height:1;flex-shrink:0;">→</span>
+          ${outcomeHtml}
+        </div>
+        <div style="flex:1;background:var(--gray-100);border-radius:4px;height:14px;overflow:hidden;min-width:60px;">
+          <div style="width:${barW}%;height:100%;background:${oc};opacity:0.45;border-radius:4px;"></div>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--gray-700);white-space:nowrap;min-width:80px;text-align:right;">
+          ${count.toLocaleString()} <span style="font-weight:400;color:var(--gray-400);font-size:11px;">(${pct}%)</span>
+        </div>
+      </div>`;
+  }
+
+  let html = `
+    <div style="display:flex;gap:28px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--gray-100);">
+      <div>
+        <div style="font-size:24px;font-weight:800;color:var(--gray-800);line-height:1;">${total.toLocaleString()}</div>
+        <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;">patients</div>
+      </div>
+      <div>
+        <div style="font-size:24px;font-weight:800;color:var(--gray-800);line-height:1;">${Object.keys(trajCounts).length}</div>
+        <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;">trajectoires uniques</div>
+      </div>
+      <div>
+        <div style="font-size:24px;font-weight:800;color:var(--blue);line-height:1;">${total > 0 ? Math.round(multiProgCount / total * 100) : 0}%</div>
+        <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;">multi-programme</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:0 10px 7px;margin-bottom:4px;border-bottom:1px solid var(--gray-100);">
+      <div style="min-width:240px;font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.06em;">Parcours · Path</div>
+      <div style="flex:1;"></div>
+      <div style="min-width:80px;text-align:right;font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.06em;">Patients</div>
+    </div>`;
+
+  for (const startProg of ['PNS','PTA','USN']) {
+    const rows = (groups[startProg] || []).sort((a, b) => b[1] - a[1]);
+    if (rows.length === 0) continue;
+    const groupTotal = rows.reduce((s, [, v]) => s + v, 0);
+    html += `
+      <div style="padding:8px 10px 3px;margin-top:6px;">
+        <span style="font-size:10px;font-weight:800;color:${progColor[startProg]};text-transform:uppercase;letter-spacing:0.08em;">Débute par ${startProg}</span>
+        <span style="font-size:10px;color:var(--gray-400);margin-left:8px;">${groupTotal.toLocaleString()} patients · ${Math.round(groupTotal/total*100)}%</span>
+      </div>`;
+    html += rows.map(([key, count]) => renderRow(key, count)).join('');
+  }
+
+  el.innerHTML = html;
+}
+
 // ── DATA QUALITY ──
 
 function renderDataQuality(dqReport, episodes) {
@@ -964,6 +1084,7 @@ function render() {
   renderBreastfeedingVax(episodes);
   renderSitePerformance(episodes);
   renderCarePathway(_dashData.cases, range);
+  renderTrajectoryFlow(_dashData.cases, range);
   renderDataQuality(_dashData.dqReport, episodes);
 
   // Wire export buttons
