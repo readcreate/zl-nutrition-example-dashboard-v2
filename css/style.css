@@ -1164,4 +1164,5 @@ a { color: inherit; text-decoration: none; }
   .date-bar-inner { gap: 8px; }
   .date-bar-meta { display: none; }
   .date-range-inputs input[type="date"] { width: 110px; }
+  #trajectory-chart { overflow-x: auto; }
 }
