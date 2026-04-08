@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PIH Nutrition — Profils & Résultats</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="nav-container"></div>
+
+<!-- DATE RANGE BAR (sticky) -->
+<div class="date-bar">
+  <div class="date-bar-inner">
+    <div class="date-quick-btns">
+      <button class="date-quick-btn" data-days="7">7 jours</button>
+      <button class="date-quick-btn" data-days="30">30 jours</button>
+      <button class="date-quick-btn" data-days="90">3 mois</button>
+      <button class="date-quick-btn" data-days="365">1 an</button>
+      <button class="date-quick-btn" data-days="all">Tout / All</button>
+    </div>
+    <div class="date-range-sep"></div>
+    <div class="date-range-inputs">
+      <input type="date" id="date-start" title="Date de début / Start date">
+      <span class="date-sep">—</span>
+      <input type="date" id="date-end" title="Date de fin / End date">
+    </div>
+    <div id="data-meta" class="date-bar-meta"></div>
+    <button class="export-btn" id="export-btn" title="Exporter les données filtrées en CSV / Export filtered data as CSV">
+      ↓ Export CSV
+    </button>
+  </div>
+</div>
+
+<!-- NO DATA STATE -->
+<div id="no-data-banner" class="no-data-banner" style="display:none;">
+  <div style="font-size:52px;margin-bottom:16px;">📂</div>
+  <div class="no-data-title">Aucune donnée chargée / No data loaded</div>
+  <div class="no-data-desc">
+    Veuillez d'abord charger vos fichiers d'export CommCare.<br>
+    <em>Please upload your CommCare export files first.</em>
+  </div>
+  <a href="index.html" class="load-btn" style="display:inline-block;margin-top:24px;text-decoration:none;">
+    Charger les données →
+  </a>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="analytics-content" class="page active" style="display:none;">
+
+  <!-- ROW 1: SITE PERFORMANCE (full width) -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-header-row" style="margin-bottom:14px;">
+      <div>
+        <div class="card-title" style="margin-bottom:2px;">Performance par site / Site performance</div>
+        <div class="card-subtitle">Admissions, taux de guérison, durée de séjour et répartition des programmes par site · Admissions, recovery rate, avg. LOS and program mix by site</div>
+      </div>
+      <button class="export-btn-inline" id="site-export-btn">↓ CSV</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Site</th>
+            <th>Total adm.</th>
+            <th>Taux guérison</th>
+            <th>Taux abandon</th>
+            <th>Durée séjour moy.</th>
+            <th>Répartition prog.</th>
+          </tr>
+        </thead>
+        <tbody id="site-perf-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ROW 2: NUTRITIONAL STATUS + WEIGHT GAIN -->
+  <div class="two-col" style="margin-bottom:20px;">
+
+    <div class="card">
+      <div class="card-title">Statut nutritionnel à l'admission / Nutritional status at admission</div>
+      <div class="card-subtitle">Répartition P/T à la première visite, patients avec données disponibles</div>
+      <div id="pt-chart" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Gain de poids à la sortie / Weight gain at discharge</div>
+      <div class="card-subtitle">Distribution du gain total en grammes, patients sortis guéris · Cured patients, total weight gain in grams</div>
+      <div id="wg-chart" style="margin-top:14px;"></div>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: PATIENT PROFILES -->
+  <div class="two-col" style="margin-bottom:20px;">
+
+    <div class="card">
+      <div class="card-title">Profils des patients — Âge &amp; Sexe / Patient profiles — Age &amp; Sex</div>
+      <div class="card-subtitle">Distribution par groupe d'âge et sexe · Age group and sex distribution</div>
+      <div id="profile-age-chart" style="margin-top:14px;"></div>
+      <div id="profile-sex-chart" style="margin-top:16px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Allaitement &amp; Vaccination / Breastfeeding &amp; Vaccination</div>
+      <div class="card-subtitle">Statut à l'enregistrement · Status at registration</div>
+      <div id="profile-bf-chart" style="margin-top:14px;"></div>
+      <div id="profile-vax-chart" style="margin-top:16px;"></div>
+    </div>
+
+  </div>
+
+  <!-- ROW 4: LENGTH OF STAY + GEOGRAPHIC -->
+  <div class="two-col" style="margin-bottom:20px;">
+
+    <div class="card">
+      <div class="card-title">Durée de séjour / Length of stay</div>
+      <div class="card-subtitle">Distribution par programme, patients sortis · Distribution by program, discharged patients</div>
+      <div id="los-chart" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Répartition géographique / Geographic breakdown</div>
+      <div class="card-subtitle">Admissions par site · Admissions by site</div>
+      <div id="geo-chart" style="margin-top:14px;"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="js/shared.js"></script>
+<script src="js/analytics.js"></script>
+<script>
+  document.getElementById('nav-container').innerHTML = buildNav('profiles');
+</script>
+</body>
+</html>

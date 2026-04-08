@@ -85,6 +85,7 @@ function noDataHtml(msg) {
 // ── SUMMARY STATS ──
 
 function renderSummaryStats(episodes) {
+  if (!document.getElementById('stat-grid')) return;
   const total    = episodes.length;
   const exited   = episodes.filter(e => e.outcome !== null);
   const active   = total - exited.length;

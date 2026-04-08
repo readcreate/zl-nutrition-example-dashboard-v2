@@ -48,8 +48,16 @@ function buildNav(activeId) {
         <span class="en">Upload Data</span>
       </a>
       <a class="nav-link ${activeId === 'analytics' ? 'active' : ''}" href="analytics.html">
-        <span class="fr">Analytique</span>
-        <span class="en">Analytics</span>
+        <span class="fr">Vue d'ensemble</span>
+        <span class="en">Overview</span>
+      </a>
+      <a class="nav-link ${activeId === 'profiles' ? 'active' : ''}" href="profiles.html">
+        <span class="fr">Profils & Résultats</span>
+        <span class="en">Profiles & Outcomes</span>
+      </a>
+      <a class="nav-link ${activeId === 'pathways' ? 'active' : ''}" href="pathways.html">
+        <span class="fr">Parcours & Qualité</span>
+        <span class="en">Pathways & Quality</span>
       </a>
     </div>
   </nav>`;
