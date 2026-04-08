@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PIH Nutrition — Chargement des données</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="nav-container"></div>
+
+<div class="upload-page-body">
+
+  <div class="upload-hero">
+    <div class="upload-hero-inner">
+      <div style="margin-bottom:18px;">
+        <span class="upload-pih-label">Partners In Health — Haïti</span>
+      </div>
+      <h1 class="upload-title-fr">Tableau de bord nutritionnel</h1>
+      <p class="upload-title-en">PIH Haiti Nutrition Analytics Dashboard</p>
+      <p class="upload-desc">
+        Chargez vos exports CommCare pour accéder aux analyses rétrospectives du programme nutrition.
+        <br><em>Upload your CommCare exports to access retrospective nutrition program analytics.</em>
+      </p>
+    </div>
+  </div>
+
+  <div class="upload-body-inner">
+
+    <!-- DROP ZONE -->
+    <div class="upload-zone-wrap">
+      <input type="file" id="file-input" multiple accept=".xlsx" style="display:none">
+      <div class="dropzone" id="dropzone">
+        <div class="dropzone-icon">📂</div>
+        <div class="dropzone-fr">
+          Glisser les fichiers ici, ou
+          <button class="dropzone-link" id="browse-btn">choisir les fichiers</button>
+        </div>
+        <div class="dropzone-en">
+          Drag &amp; drop .xlsx files here, or
+          <button class="dropzone-link" id="browse-btn-2">browse</button>
+        </div>
+        <div class="dropzone-hint">
+          Fichiers d'export CommCare (.xlsx) &middot; Plusieurs fichiers acceptés
+        </div>
+      </div>
+    </div>
+
+    <!-- FILE LIST -->
+    <div id="file-list" style="display:none;">
+      <div class="file-list-header">
+        <span class="file-list-title">Fichiers sélectionnés / Selected files</span>
+        <button class="file-clear-btn" id="clear-btn">Effacer tout / Clear all</button>
+      </div>
+      <div id="file-items"></div>
+    </div>
+
+    <!-- ERROR BANNER -->
+    <div id="error-banner" class="error-banner" style="display:none;"></div>
+
+    <!-- LOAD BUTTON -->
+    <div class="load-btn-wrap">
+      <button class="load-btn" id="load-btn" disabled>
+        <span id="load-btn-text">Analyser les données →</span>
+      </button>
+      <div class="load-btn-hint" id="load-hint">
+        Sélectionnez au moins un fichier pour continuer &middot; Select at least one file to continue
+      </div>
+    </div>
+
+    <!-- FORMAT NOTE -->
+    <div class="upload-format-note">
+      <div class="upload-format-title">Format attendu / Expected format</div>
+      <div class="upload-format-body">
+        Fichier d'export brut CommCare contenant les feuilles :
+        <strong>Enregistrement</strong>, <strong>Visite PNS</strong>, <strong>Visite PTA</strong>,
+        <strong>Visite USN</strong>, <strong>Exeat PNS/PTA/USN</strong>, <strong>Dictionnaire</strong>.
+        <br>
+        <em>Raw CommCare export with sheets: Enregistrement, Visite PNS/PTA/USN, Exeat PNS/PTA/USN, Dictionnaire.</em>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/shared.js"></script>
+<script>
+document.getElementById('nav-container').innerHTML = buildNav('upload');
+
+const fileInput   = document.getElementById('file-input');
+const dropzone    = document.getElementById('dropzone');
+const fileListEl  = document.getElementById('file-list');
+const fileItemsEl = document.getElementById('file-items');
+const errorBanner = document.getElementById('error-banner');
+const loadBtn     = document.getElementById('load-btn');
+const loadBtnText = document.getElementById('load-btn-text');
+const loadHint    = document.getElementById('load-hint');
+const clearBtn    = document.getElementById('clear-btn');
+
+let pendingFiles = [];
+
+// ── BROWSE BUTTONS ──
+document.getElementById('browse-btn').addEventListener('click',   e => { e.stopPropagation(); fileInput.click(); });
+document.getElementById('browse-btn-2').addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
+dropzone.addEventListener('click', () => fileInput.click());
+
+// ── DRAG & DROP ──
+dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', ()  => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  addFiles([...e.dataTransfer.files]);
+});
+
+fileInput.addEventListener('change', () => {
+  addFiles([...fileInput.files]);
+  fileInput.value = '';
+});
+
+// ── FILE HANDLING ──
+function addFiles(files) {
+  const xlsx = files.filter(f => f.name.toLowerCase().endsWith('.xlsx'));
+  const bad  = files.filter(f => !f.name.toLowerCase().endsWith('.xlsx'));
+
+  if (bad.length) {
+    showError(`Fichiers ignorés (format non supporté / unsupported format): ${bad.map(f => f.name).join(', ')}`);
+  } else {
+    hideError();
+  }
+
+  if (xlsx.length === 0) return;
+
+  const existing = new Set(pendingFiles.map(f => f.name));
+  const newFiles = xlsx.filter(f => !existing.has(f.name));
+  if (newFiles.length === 0) return;
+  pendingFiles.push(...newFiles);
+  renderFileList();
+}
+
+function renderFileList() {
+  if (pendingFiles.length === 0) {
+    fileListEl.style.display = 'none';
+    loadBtn.disabled = true;
+    loadHint.textContent = 'Sélectionnez au moins un fichier pour continuer · Select at least one file to continue';
+    return;
+  }
+
+  fileListEl.style.display = 'block';
+  fileItemsEl.innerHTML = pendingFiles.map((f, i) => `
+    <div class="file-item" id="file-item-${i}">
+      <span class="file-item-icon">📄</span>
+      <div class="file-item-info">
+        <div class="file-item-name">${f.name}</div>
+        <div class="file-item-meta">${(f.size / 1024).toFixed(0)} KB</div>
+      </div>
+      <span class="file-item-status pending" id="file-status-${i}">En attente</span>
+      <button class="file-remove-btn" onclick="removeFile(${i})" title="Retirer ce fichier">✕</button>
+    </div>
+  `).join('');
+
+  loadBtn.disabled = false;
+  const n = pendingFiles.length;
+  loadHint.textContent = `${n} fichier${n > 1 ? 's' : ''} prêt${n > 1 ? 's' : ''} · ${n} file${n > 1 ? 's' : ''} ready`;
+}
+
+function removeFile(i) {
+  pendingFiles.splice(i, 1);
+  hideError();
+  renderFileList();
+}
+
+clearBtn.addEventListener('click', () => {
+  pendingFiles = [];
+  hideError();
+  renderFileList();
+});
+
+// ── PARSE & LOAD ──
+loadBtn.addEventListener('click', async () => {
+  if (pendingFiles.length === 0) return;
+
+  loadBtn.disabled = true;
+  loadBtnText.textContent = 'Analyse en cours… / Parsing…';
+  hideError();
+
+  pendingFiles.forEach((_, i) => setFileStatus(i, 'loading', 'Lecture…'));
+
+  try {
+    const data = await parseFiles(pendingFiles);
+    pendingFiles.forEach((_, i) => setFileStatus(i, 'ready', `Prêt ✓`));
+
+    try {
+      sessionStorage.setItem('pih_nutrition_data', JSON.stringify(data));
+    } catch (storageErr) {
+      // sessionStorage full — still navigate, analytics.js will re-parse if needed
+      console.warn('sessionStorage quota exceeded, proceeding without cache.');
+      sessionStorage.setItem('pih_nutrition_data', JSON.stringify({
+        meta: data.meta, cases: data.cases.slice(0, 5000), suppMonthly: data.suppMonthly
+      }));
+    }
+
+    const { caseCount, programCounts } = data.meta;
+    loadBtnText.textContent = `${caseCount} cas chargés — ouverture du tableau de bord…`;
+
+    setTimeout(() => { window.location.href = 'analytics.html'; }, 700);
+
+  } catch (err) {
+    console.error(err);
+    showError('Erreur: ' + (err.message || 'Impossible de lire les fichiers.'));
+    loadBtnText.textContent = 'Analyser les données →';
+    loadBtn.disabled = false;
+    pendingFiles.forEach((_, i) => setFileStatus(i, 'error', 'Erreur'));
+  }
+});
+
+function setFileStatus(i, cls, text) {
+  const el = document.getElementById(`file-status-${i}`);
+  if (el) { el.className = `file-item-status ${cls}`; el.textContent = text; }
+}
+
+function showError(msg) {
+  errorBanner.textContent = msg;
+  errorBanner.style.display = 'block';
+}
+function hideError() {
+  errorBanner.style.display = 'none';
+}
+</script>
+
+</body>
+</html>
